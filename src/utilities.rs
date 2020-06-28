@@ -5,6 +5,11 @@ pub struct Configuration {
 
 pub fn parse_parameters(params : Vec<String>) -> Configuration {
 
+    if params.len() <= 1 {
+        eprintln!("error: Cantidad insuficiente de parametros");
+        std::process::exit(1);
+    }
+    
     let player_count: i8 = match params[1].parse() {
         Ok(n) => {
             n
@@ -13,7 +18,6 @@ pub fn parse_parameters(params : Vec<String>) -> Configuration {
             eprintln!("error: El numero de jugadores invalido");
             std::process::exit(1);
         },
-        
     };
 
     // Valido que los jugadores sean pares y >= 4
