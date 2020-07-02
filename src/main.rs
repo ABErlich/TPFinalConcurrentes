@@ -1,26 +1,30 @@
+mod utilities;
+mod logger;
 use std::thread;
 
 const CANTIDAD_CARTAS: u8 = 52; //La baraja francesa es un conjunto de naipes o cartas, formado por 52 unidades.
-const N_JUGADORES: u8 = 6;
 
 fn main() {
-    //let mut players = vec![];
-    println!("Cantidad de cartas: {}", CANTIDAD_CARTAS);
+    let config = utilities::parse_parameters(std::env::args().collect());
+    let n_jugadores = config.player_count as u8;
+    println!("player count: {0}", n_jugadores);
 
     let mut children = vec![];
 
-    for i in 1..N_JUGADORES + 1 {
-    	children.push( thread::spawn(move || 
-    		{ 
-    			println!("Jugador {}: Tengo {} cartas", i, CANTIDAD_CARTAS/N_JUGADORES); 
-    		}
-    	));
+    for i in 1..n_jugadores + 1 {
+        children.push( thread::spawn(move || 
+            { 
+                println!("Jugador {}: Tengo {} cartas", i, CANTIDAD_CARTAS/n_jugadores); 
+            }
+        ));
     }
 
 
     for child in children {
-		// Esperar que terminen los threads
-		let _ = child.join();
-	}
+        // Esperar que terminen los threads
+        let _ = child.join();
+    }
 
+    logger::log("lcdtmab".to_string());
 }
+
