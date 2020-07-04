@@ -1,20 +1,24 @@
 mod utilities;
 mod logger;
 use std::thread;
+use std::sync::{Arc};
 
-const CANTIDAD_CARTAS: u8 = 52; //La baraja francesa es un conjunto de naipes o cartas, formado por 52 unidades.
+const CANTIDAD_CARTAS: u8 = 52; // La baraja francesa es un conjunto de naipes o cartas, formado por 52 unidades.
 
 fn main() {
     let config = utilities::parse_parameters(std::env::args().collect());
     let n_jugadores = config.player_count as u8;
-    logger::log(format!("player count: {0}\n", n_jugadores));
+    let log = logger::crear_log();
+    logger::log(&log, format!("Cantidad de jugadores: {0}\n", n_jugadores));
 
     let mut children = vec![];
 
     for i in 1..n_jugadores + 1 {
+
+        let log = Arc::clone(&log);
         children.push( thread::spawn(move || 
             { 
-                logger::log(format!("Jugador {}: Tengo {} cartas\n", i, CANTIDAD_CARTAS/n_jugadores)); 
+                logger::log(&log, format!("Jugador {}: Tengo {} cartas\n", i, CANTIDAD_CARTAS/n_jugadores)); 
             }
         ));
     }
