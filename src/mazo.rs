@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct Carta {
     pub numero: String,
     pub palo: String,
@@ -21,6 +22,7 @@ pub fn nuevo() -> Mazo {
         Carta { numero: "7".to_string(), palo: "diamantes".to_string()},
         Carta { numero: "8".to_string(), palo: "diamantes".to_string()},
         Carta { numero: "9".to_string(), palo: "diamantes".to_string()},
+        Carta { numero: "10".to_string(), palo: "diamantes".to_string()},
         Carta { numero: "J".to_string(), palo: "diamantes".to_string()},
         Carta { numero: "Q".to_string(), palo: "diamantes".to_string()},
         Carta { numero: "K".to_string(), palo: "diamantes".to_string()},
@@ -33,7 +35,8 @@ pub fn nuevo() -> Mazo {
         Carta { numero: "6".to_string(), palo: "picas".to_string()},
         Carta { numero: "7".to_string(), palo: "picas".to_string()},
         Carta { numero: "8".to_string(), palo: "picas".to_string()},
-        Carta { numero: "9".to_string(), palo: "picas".to_string()},
+        Carta { numero: "9".to_string(), palo: "diamantes".to_string()},
+        Carta { numero: "10".to_string(), palo: "picas".to_string()},
         Carta { numero: "J".to_string(), palo: "picas".to_string()},
         Carta { numero: "Q".to_string(), palo: "picas".to_string()},
         Carta { numero: "K".to_string(), palo: "picas".to_string()},
@@ -47,6 +50,7 @@ pub fn nuevo() -> Mazo {
         Carta { numero: "7".to_string(), palo: "corazones".to_string()},
         Carta { numero: "8".to_string(), palo: "corazones".to_string()},
         Carta { numero: "9".to_string(), palo: "corazones".to_string()},
+        Carta { numero: "10".to_string(), palo: "diamantes".to_string()},
         Carta { numero: "J".to_string(), palo: "corazones".to_string()},
         Carta { numero: "Q".to_string(), palo: "corazones".to_string()},
         Carta { numero: "K".to_string(), palo: "corazones".to_string()},
@@ -60,6 +64,7 @@ pub fn nuevo() -> Mazo {
         Carta { numero: "7".to_string(), palo: "treboles".to_string()},
         Carta { numero: "8".to_string(), palo: "treboles".to_string()},
         Carta { numero: "9".to_string(), palo: "treboles".to_string()},
+        Carta { numero: "10".to_string(), palo: "diamantes".to_string()},
         Carta { numero: "J".to_string(), palo: "treboles".to_string()},
         Carta { numero: "Q".to_string(), palo: "treboles".to_string()},
         Carta { numero: "K".to_string(), palo: "treboles".to_string()},
