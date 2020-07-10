@@ -14,9 +14,6 @@ fn main() {
     let log = logger::crear_log();
     let mut round_number = 1;
     
-
-    // let mesa = Arc::new(Mutex::new(channel::<mazo::Carta>()));
-
     logger::log(&log, format!("Cantidad de jugadores: {0}\n", n_jugadores));
 
     let jugadores = juego::iniciar_juego(&log, n_jugadores);
@@ -35,7 +32,6 @@ fn main() {
 
 
     for jugador in jugadores {
-        // Esperar que terminen los threads
         let _ = jugador.join();
     }
 

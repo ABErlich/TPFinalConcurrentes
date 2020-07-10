@@ -25,10 +25,12 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
         ));
     }
 
-    
-    // reparto las cartas, TODO: Hacer que se haga un shuffle de cartas
+    let mut rng = thread_rng();
+    let mut cartas = mazo.cartas.clone();
+    cartas.shuffle(&mut rng); // Mezclo las cartas
+
     for i in 0..(cartas_por_jugador * n_jugadores) {
-        let carta = mazo.cartas[i].clone();
+        let carta = cartas[i].clone();
 
         jugadores_channels[i % n_jugadores].send(carta).unwrap();
         
