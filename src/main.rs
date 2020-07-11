@@ -5,7 +5,7 @@ mod jugador;
 mod juego;
 use std::thread;
 use std::sync::{Arc, Barrier};
-use std::sync::mpsc::channel;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use rand::prelude::*;
 
 fn main() {
@@ -17,6 +17,7 @@ fn main() {
     logger::log(&log, format!("Cantidad de jugadores: {0}\n", n_jugadores));
 
     let jugadores = juego::iniciar_juego(&log, n_jugadores);
+    //TO DO: Devolver un struct con los jugadores y sus canales de comunicacion de cartas.
 
     loop {
         round_number += 1;
@@ -31,7 +32,7 @@ fn main() {
     }
 
 
-    for jugador in jugadores {
+    for jugador in jugadores.jugadores_handler {
         let _ = jugador.join();
     }
 
