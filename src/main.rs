@@ -16,23 +16,22 @@ fn main() {
     
     logger::log(&log, format!("Cantidad de jugadores: {0}\n", n_jugadores));
 
-    let jugadores = juego::iniciar_juego(&log, n_jugadores);
-    //TO DO: Devolver un struct con los jugadores y sus canales de comunicacion de cartas.
+    let coordinador_sinc = juego::iniciar_juego(&log, n_jugadores);
+    //TODO: Devolver un struct con los jugadores y sus canales de comunicacion de cartas.
 
     loop {
         round_number += 1;
         
-        juego::iniciar_ronda(&log);
-
+        juego::iniciar_ronda(&log, &coordinador_sinc);
 
         // TODO: Cambiar la condicion de corte
-        if round_number == 5 {
+        if round_number == 2 {
             break;
         }
     }
 
 
-    for jugador in jugadores.jugadores_handler {
+    for jugador in coordinador_sinc.jugadores_handler {
         let _ = jugador.join();
     }
 
