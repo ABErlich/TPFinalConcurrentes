@@ -4,14 +4,14 @@ pub struct SincronizadorCoordinador {
     pub jugadores_handler: Vec<thread::JoinHandle<()>>,
     pub jugadores_channels: Vec<Sender<mazo::Carta>>,
     pub jugadores_ronda: Vec<Sender<bool>>,
-    pub pilon_central_cartas: Receiver<mazo::Carta>,
+    pub pilon_central_cartas: Receiver<(mazo::Carta, usize)>,
     pub barrier: Arc<Barrier>
 }
 
 pub struct SincronizadorJugador{
     pub cartas_receiver: Receiver<mazo::Carta>,
     pub ronda_receiver: Receiver<bool>,
-    pub pilon_central_cartas: Sender<mazo::Carta>,
+    pub pilon_central_cartas: Sender<(mazo::Carta, usize)>,
     pub barrier: Arc<Barrier>
 }
 
@@ -23,7 +23,7 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
     let mut jugadores_channels_ronda = vec![];
     let mazo = mazo::nuevo();
     let barrier = Arc::new(Barrier::new(n_jugadores + 1));
-    let (pilon_central_sender, pilon_central_receiver) = channel::<mazo::Carta>();
+    let (pilon_central_sender, pilon_central_receiver) = channel::<(mazo::Carta, usize)>();
     let cartas_por_jugador = mazo.cartas.len() / n_jugadores;
 
     // Lanzo los jugadores
@@ -78,8 +78,8 @@ pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sin
     }
 
     for _i in 0..sinc.jugadores_channels.len() {
-        let carta = sinc.pilon_central_cartas.recv().unwrap();
-        logger::log(&log, format!("Coordinador recibi: {} de {}\n", carta.numero, carta.palo));
+        let (carta, id_jugadador) = sinc.pilon_central_cartas.recv().unwrap();
+        logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", carta.numero, carta.palo, id_jugadador));
     }
 }
 

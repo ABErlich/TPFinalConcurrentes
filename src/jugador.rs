@@ -14,6 +14,6 @@ pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_ju
 
    
     organizador.ronda_receiver.recv().unwrap();
-    organizador.pilon_central_cartas.send(mis_cartas[0].clone()).unwrap();
+    organizador.pilon_central_cartas.send((mis_cartas[0].clone(), numero_jugador)).unwrap();
     
 }
