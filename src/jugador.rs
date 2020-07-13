@@ -13,7 +13,7 @@ pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_ju
     organizador.barrier.wait(); // aviso que termino de recibir las cartas
 
    
-    organizador.cartas_receiver.recv().unwrap();
+    organizador.ronda_receiver.recv().unwrap();
     organizador.pilon_central_cartas.send(mis_cartas[0].clone()).unwrap();
     
 }

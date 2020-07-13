@@ -3,12 +3,14 @@ use super::*;
 pub struct SincronizadorCoordinador {
     pub jugadores_handler: Vec<thread::JoinHandle<()>>,
     pub jugadores_channels: Vec<Sender<mazo::Carta>>,
+    pub jugadores_ronda: Vec<Sender<bool>>,
     pub pilon_central_cartas: Receiver<mazo::Carta>,
     pub barrier: Arc<Barrier>
 }
 
 pub struct SincronizadorJugador{
     pub cartas_receiver: Receiver<mazo::Carta>,
+    pub ronda_receiver: Receiver<bool>,
     pub pilon_central_cartas: Sender<mazo::Carta>,
     pub barrier: Arc<Barrier>
 }
@@ -18,6 +20,7 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 
     let mut jugadores = vec![];
     let mut jugadores_channels_sender = vec![];
+    let mut jugadores_channels_ronda = vec![];
     let mazo = mazo::nuevo();
     let barrier = Arc::new(Barrier::new(n_jugadores + 1));
     let (pilon_central_sender, pilon_central_receiver) = channel::<mazo::Carta>();
@@ -26,10 +29,13 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
     // Lanzo los jugadores
     for i in 1..n_jugadores + 1 {
         let (sender_jugador, receiver_jugador) = channel::<mazo::Carta>();
+        let (sender_ronda, receiver_ronda) = channel::<bool>();
         jugadores_channels_sender.push(sender_jugador);
+        jugadores_channels_ronda.push(sender_ronda);
         let sinc = SincronizadorJugador{ cartas_receiver: receiver_jugador, 
             pilon_central_cartas: pilon_central_sender.clone(),
-            barrier: barrier.clone()};
+            barrier: barrier.clone(),
+            ronda_receiver: receiver_ronda};
 
         let log = Arc::clone(&log);
         jugadores.push( thread::spawn(move || 
@@ -55,13 +61,14 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
     return SincronizadorCoordinador{jugadores_handler: jugadores, 
                                 pilon_central_cartas: pilon_central_receiver,
                                 jugadores_channels: jugadores_channels_sender,
-                                barrier: barrier};
+                                barrier: barrier,
+                                jugadores_ronda: jugadores_channels_ronda};
 }
 
 
 pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &SincronizadorCoordinador) {
-    for send_channel_player in sinc.jugadores_channels.iter(){
-        send_channel_player.send(mazo::Carta{ numero: "comodin".to_string(), palo: "comodin".to_string()}).unwrap();
+    for send_ronda_player in sinc.jugadores_ronda.iter(){
+        send_ronda_player.send(true).unwrap();
     }
     
     if sortear_ronda() > 0.5 {
