@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_jugador: usize, organizador: juego::SincronizadorJugador, cant_cartas: usize) {
+pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_jugador: usize, organizador: juego::SincronizadorJugador, cant_cartas: usize, cant_rondas: usize) {
     let mut mis_cartas = Vec::new();
 
     for _i in 0..cant_cartas {
@@ -11,9 +11,16 @@ pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_ju
 
     logger::log(&log, format!("JUGADOR {} LISTO\n", numero_jugador));
     organizador.barrier.wait(); // aviso que termino de recibir las cartas
-
-   
-    organizador.ronda_receiver.recv().unwrap();
-    organizador.pilon_central_cartas.send((mis_cartas[0].clone(), numero_jugador)).unwrap();
     
+    let mut round_number = 1;
+    loop {
+
+        organizador.ronda_receiver.recv().unwrap();
+        organizador.pilon_central_cartas.send((mis_cartas[round_number-1].clone(), numero_jugador)).unwrap();
+
+        if round_number == cant_rondas {
+            break;
+        }
+        round_number += 1;
+    }
 }

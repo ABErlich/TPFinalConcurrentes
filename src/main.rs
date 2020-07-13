@@ -16,18 +16,18 @@ fn main() {
     
     logger::log(&log, format!("Cantidad de jugadores: {0}\n", n_jugadores));
 
-    let coordinador_sinc = juego::iniciar_juego(&log, n_jugadores);
+    let (coordinador_sinc, cant_rondas) = juego::iniciar_juego(&log, n_jugadores);
     //TODO: Devolver un struct con los jugadores y sus canales de comunicacion de cartas.
 
     loop {
-        round_number += 1;
         
         juego::iniciar_ronda(&log, &coordinador_sinc);
 
         // TODO: Cambiar la condicion de corte
-        if round_number == 2 {
+        if round_number == cant_rondas {
             break;
         }
+        round_number += 1;
     }
 
 

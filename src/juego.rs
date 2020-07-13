@@ -16,7 +16,7 @@ pub struct SincronizadorJugador{
 }
 
 // Estado inicial, se crean los jugadores y se reparten las cartas
-pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_jugadores: usize) -> SincronizadorCoordinador {
+pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_jugadores: usize) -> (SincronizadorCoordinador, usize) {
 
     let mut jugadores = vec![];
     let mut jugadores_channels_sender = vec![];
@@ -40,7 +40,7 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
         let log = Arc::clone(&log);
         jugadores.push( thread::spawn(move || 
             { 
-                jugador::jugador(&log, i, sinc, cartas_por_jugador);
+                jugador::jugador(&log, i, sinc, cartas_por_jugador, cartas_por_jugador);
             }
         ));
     }
@@ -58,11 +58,11 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 
     barrier.wait();
 
-    return SincronizadorCoordinador{jugadores_handler: jugadores, 
+    return (SincronizadorCoordinador{jugadores_handler: jugadores, 
                                 pilon_central_cartas: pilon_central_receiver,
                                 jugadores_channels: jugadores_channels_sender,
                                 barrier: barrier,
-                                jugadores_ronda: jugadores_channels_ronda};
+                                jugadores_ronda: jugadores_channels_ronda}, cartas_por_jugador);
 }
 
 
