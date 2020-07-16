@@ -67,38 +67,52 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 
 
 pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &SincronizadorCoordinador) {
+    let tipo_de_ronda : bool = sortear_ronda(&log);
+
     for send_ronda_player in sinc.jugadores_ronda.iter(){
-        send_ronda_player.send(true).unwrap();
+        send_ronda_player.send(tipo_de_ronda).unwrap();
     }
-    
-    if sortear_ronda() > 0.5 {
-        ronda_normal(&log);
-    } else {
-        ronda_rustica(&log);
-    }
+
+    let mut cartas_jugadores: Vec<(mazo::Carta, usize)> = vec![];
 
     for _i in 0..sinc.jugadores_channels.len() {
-        let (carta, id_jugadador) = sinc.pilon_central_cartas.recv().unwrap();
-        logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", carta.numero, carta.palo, id_jugadador));
+        let carta = sinc.pilon_central_cartas.recv().unwrap();
+        logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", carta.0.numero, carta.0.palo, carta.1));
+        cartas_jugadores.push(carta);
     }
+
+    if tipo_de_ronda {
+        ronda_normal(&log, cartas_jugadores);
+    }else{
+        ronda_rustica(&log, cartas_jugadores);
+    }
+
 }
 
 
-fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>) {
-
-    logger::log(&log, "Iniciando ronda normal\n".to_string());
+fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, _cartas: Vec<(mazo::Carta, usize)>) {
+    //TODO: Funcionalidad ronda normal
+    logger::log(&log, "Termino ronda normal\n".to_string());
 }
 
-fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>) {
-
-    logger::log(&log, "Iniciando ronda rustica\n".to_string());
+fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, _cartas: Vec<(mazo::Carta, usize)>) {
+    //TODO: Funcionalidad ronda rustica
+    logger::log(&log, "Termino ronda rustica\n".to_string());
 }
 
 
 
-fn sortear_ronda() -> f64 {
+fn sortear_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>) -> bool {
 
     let mut rng = thread_rng();
-    return rng.gen_range(0., 1.0);
+    let random = rng.gen_range(0., 1.0);
+
+    if random > 0.5 {
+        logger::log(&log, "Iniciando ronda normal\n".to_string());
+        return true;
+    } else {
+        logger::log(&log, "Iniciando ronda rustica\n".to_string());
+        return false;
+    }
     
 }

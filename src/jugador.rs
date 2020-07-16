@@ -15,7 +15,10 @@ pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_ju
     let mut round_number = 1;
     loop {
 
-        organizador.ronda_receiver.recv().unwrap();
+        let tipo_de_ronda = organizador.ronda_receiver.recv().unwrap();
+        if tipo_de_ronda == false {
+            //TODO: sleep para simular tiempo que tarda el jugador en poner la carta.
+        }
         organizador.pilon_central_cartas.send((mis_cartas[round_number-1].clone(), numero_jugador)).unwrap();
 
         if round_number == cant_rondas {
