@@ -57,18 +57,19 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 }
 
 
-pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> Vec<(usize, usize)> {
+pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> Vec<(usize, f64)> {
     
     let mut cartas_jugadas = Vec::new();
 
     if sortear_ronda() > 0.0 {
         logger::log(&log, "Iniciando ronda normal\n".to_string());
         cartas_jugadas = ronda_normal(&log, &sinc);
+        logger::log(&log, "Termino ronda normal\n".to_string());
     } else {
         logger::log(&log, "Iniciando ronda rustica\n".to_string());
     }
 
-    return contabilizar_puntos(cartas_jugadas);
+    return contabilizar_puntos(&cartas_jugadas);
 
 }
 
@@ -88,8 +89,6 @@ fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &s
         cartas_jugadores.push(carta);
 
     }
-
-    logger::log(&log, "Termino ronda normal\n".to_string());
 
     return cartas_jugadores;
 }
@@ -123,6 +122,7 @@ pub fn terminar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, si
         // Le doy el permiso para jugar
         logger::log(&log, format!("Avisandole a {} que se termino el juego\n", i + 1));
         sinc.jugadores_ronda[i].send(false).unwrap();
+
     }
 }
 
@@ -132,25 +132,38 @@ fn sortear_ronda() -> f64 {
     let mut rng = thread_rng();
     let random = rng.gen_range(0., 1.0);
     return random;
-    // if random > 0.5 {
-    //     logger::log(&log, "Iniciando ronda normal\n".to_string());
-    //     return true;
-    // } else {
-    //     logger::log(&log, "Iniciando ronda rustica\n".to_string());
-    //     return false;
-    // }
     
 }
 
+
 // Devuelve un vector de tuplas de la forma (numero_jugador, puntos_ganados)
-fn contabilizar_puntos(jugadas: Vec<(mazo::Carta, usize)>) -> Vec<(usize, usize)> {
+fn contabilizar_puntos(jugadas: &Vec<(mazo::Carta, usize)>) -> Vec<(usize, f64)> {
 
+    let puntos_a_repartir = 10.;
+    let mut cantidad_ganadores = 0.;
     let mut ganadores = Vec::new();
-    let mut carta_maxima = &jugadas.first().unwrap().0.numero;
+    let mut carta_maxima = &jugadas.first().unwrap().0;
 
-    // for jugada in jugadas.iter() {
+    // veo cual es la carta maximas
+    for jugada in jugadas.iter() {
+        if jugada.0.valor > carta_maxima.valor {
+            carta_maxima = &jugada.0;
+        }
+    }
 
-    // }
+    // cuantos ganadores tengo
+    for jugada in jugadas.iter() {        
+        if  jugada.0.numero == carta_maxima.numero  {
+            cantidad_ganadores +=  1.;
+        }
+    }
+
+    // armo el resultado
+    for jugada in jugadas.iter() {        
+        if  jugada.0.numero == carta_maxima.numero {
+            ganadores.push((jugada.1, puntos_a_repartir / cantidad_ganadores))
+        }
+    }
     
     return ganadores;
 }
