@@ -57,17 +57,18 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 }
 
 
-pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) {
-    let _tipo_de_ronda : bool = sortear_ronda(&log);
+pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> Vec<(usize, usize)> {
+    
+    let mut cartas_jugadas = Vec::new();
 
+    if sortear_ronda() > 0.0 {
+        logger::log(&log, "Iniciando ronda normal\n".to_string());
+        cartas_jugadas = ronda_normal(&log, &sinc);
+    } else {
+        logger::log(&log, "Iniciando ronda rustica\n".to_string());
+    }
 
-    //if tipo_de_ronda {
-    let cartas_jugadas = ronda_normal(&log, &sinc);
-    //}else{
-        //ronda_rustica(&log, cartas_jugadores);
-    //}
-
-    contabilizar_puntos(cartas_jugadas);
+    return contabilizar_puntos(cartas_jugadas);
 
 }
 
@@ -99,23 +100,40 @@ fn _ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, _carta
 }
 
 
+pub fn terminar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) {
 
-fn sortear_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>) -> bool {
+    for i in 0..sinc.jugadores_channels.len() {
+        // Le doy el permiso para jugar
+        logger::log(&log, format!("Avisandole a {} que se termino el juego\n", i + 1));
+        sinc.jugadores_ronda[i].send(false).unwrap();
+    }
+}
+
+
+fn sortear_ronda() -> f64 {
 
     let mut rng = thread_rng();
     let random = rng.gen_range(0., 1.0);
-
-    if random > 0.5 {
-        logger::log(&log, "Iniciando ronda normal\n".to_string());
-        return true;
-    } else {
-        logger::log(&log, "Iniciando ronda rustica\n".to_string());
-        return false;
-    }
+    return random;
+    // if random > 0.5 {
+    //     logger::log(&log, "Iniciando ronda normal\n".to_string());
+    //     return true;
+    // } else {
+    //     logger::log(&log, "Iniciando ronda rustica\n".to_string());
+    //     return false;
+    // }
     
 }
 
-fn contabilizar_puntos(cartas: Vec<(mazo::Carta, usize)>){
+// Devuelve un vector de tuplas de la forma (numero_jugador, puntos_ganados)
+fn contabilizar_puntos(jugadas: Vec<(mazo::Carta, usize)>) -> Vec<(usize, usize)> {
 
+    let mut ganadores = Vec::new();
+    let mut carta_maxima = &jugadas.first().unwrap().0.numero;
 
+    // for jugada in jugadas.iter() {
+
+    // }
+    
+    return ganadores;
 }

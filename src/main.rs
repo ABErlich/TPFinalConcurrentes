@@ -24,6 +24,7 @@ fn main() {
 
         // TODO: Cambiar la condicion de corte
         if round_number == 4 {
+            juego::terminar_juego(&log, &coordinador_sinc);
             break;
         }
         round_number += 1;
