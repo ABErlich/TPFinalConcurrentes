@@ -1,5 +1,13 @@
 use super::*;
 
+
+pub struct Jugada {
+    pub carta: mazo::Carta,
+    pub numero_jugador: usize,
+    pub cartas_restantes: usize,
+}
+
+
 // Estado inicial, se crean los jugadores y se reparten las cartas
 pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_jugadores: usize) -> sinc::SincronizadorCoordinador {
 
@@ -8,7 +16,7 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
     let mut jugadores_channels_ronda = vec![];
     let mazo = mazo::nuevo();
     let barrier = Arc::new(Barrier::new(n_jugadores + 1));
-    let (pilon_central_sender, pilon_central_receiver) = channel::<(mazo::Carta, usize)>();
+    let (pilon_central_sender, pilon_central_receiver) = channel::<Jugada>();
     let cartas_por_jugador = mazo.cartas.len() / n_jugadores;
 
     // Lanzo los jugadores
@@ -74,9 +82,9 @@ pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sin
 }
 
 
-fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> Vec<(mazo::Carta, usize)> {
+fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> Vec<Jugada> {
 
-    let mut cartas_jugadores: Vec<(mazo::Carta, usize)> = vec![];
+    let mut cartas_jugadores: Vec<Jugada> = vec![];
 
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
@@ -84,9 +92,9 @@ fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &s
         sinc.jugadores_ronda[i].send(true).unwrap();
 
         // recibo la carta que jugo
-        let carta = sinc.pilon_central_cartas.recv().unwrap();
-        logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", carta.0.numero, carta.0.palo, carta.1));
-        cartas_jugadores.push(carta);
+        let jugada = sinc.pilon_central_cartas.recv().unwrap();
+        logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", jugada.carta.numero, jugada.carta.palo, jugada.numero_jugador));
+        cartas_jugadores.push(jugada);
 
     }
 
@@ -120,31 +128,31 @@ fn sortear_ronda() -> f64 {
 
 
 // Devuelve un vector de tuplas de la forma (numero_jugador, puntos_ganados)
-fn contabilizar_puntos(jugadas: &Vec<(mazo::Carta, usize)>) -> Vec<(usize, f64)> {
+fn contabilizar_puntos(jugadas: &Vec<Jugada>) -> Vec<(usize, f64)> {
 
     let puntos_a_repartir = 10.;
     let mut cantidad_ganadores = 0.;
     let mut ganadores = Vec::new();
-    let mut carta_maxima = &jugadas.first().unwrap().0;
+    let mut carta_maxima = &jugadas.first().unwrap().carta;
 
     // veo cual es la carta maximas
     for jugada in jugadas.iter() {
-        if jugada.0.valor > carta_maxima.valor {
-            carta_maxima = &jugada.0;
+        if jugada.carta.valor > carta_maxima.valor {
+            carta_maxima = &jugada.carta;
         }
     }
 
     // cuantos ganadores tengo
     for jugada in jugadas.iter() {        
-        if  jugada.0.numero == carta_maxima.numero  {
+        if  jugada.carta.numero == carta_maxima.numero  {
             cantidad_ganadores +=  1.;
         }
     }
 
     // armo el resultado
     for jugada in jugadas.iter() {        
-        if  jugada.0.numero == carta_maxima.numero {
-            ganadores.push((jugada.1, puntos_a_repartir / cantidad_ganadores))
+        if  jugada.carta.numero == carta_maxima.numero {
+            ganadores.push((jugada.numero_jugador, puntos_a_repartir / cantidad_ganadores))
         }
     }
     
