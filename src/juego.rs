@@ -7,6 +7,12 @@ pub struct Jugada {
     pub cartas_restantes: usize,
 }
 
+pub struct ResumenRonda {
+    pub jugadores_puntos: Vec<(usize, f64)>,
+    pub jugador_suspendido: usize,
+    pub ultima_ronda: bool
+}
+
 
 // Estado inicial, se crean los jugadores y se reparten las cartas
 pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_jugadores: usize) -> sinc::SincronizadorCoordinador {
@@ -65,19 +71,25 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 }
 
 
-pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> Vec<(usize, f64)> {
+pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> ResumenRonda {
     
-    let mut cartas_jugadas = Vec::new();
+    let mut jugadas = Vec::new();
 
     if sortear_ronda() > 0.0 {
-        logger::log(&log, "Iniciando ronda normal\n".to_string());
-        cartas_jugadas = ronda_normal(&log, &sinc);
-        logger::log(&log, "Termino ronda normal\n".to_string());
+        logger::log(&log, "Ronda normal\n".to_string());
+        jugadas = ronda_normal(&log, &sinc);
     } else {
         logger::log(&log, "Iniciando ronda rustica\n".to_string());
     }
 
-    return contabilizar_puntos(&cartas_jugadas);
+    let resumen = ResumenRonda {
+        jugadores_puntos: contabilizar_puntos(&jugadas),
+        jugador_suspendido: 100,
+        ultima_ronda: ultima_ronda(&jugadas)
+    };
+
+
+    return resumen;
 
 }
 
@@ -88,7 +100,7 @@ fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &s
 
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
-        logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
+        // logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
         sinc.jugadores_ronda[i].send(true).unwrap();
 
         // recibo la carta que jugo
@@ -157,4 +169,15 @@ fn contabilizar_puntos(jugadas: &Vec<Jugada>) -> Vec<(usize, f64)> {
     }
     
     return ganadores;
+}
+
+fn ultima_ronda(jugadas: &Vec<Jugada>) -> bool {
+
+    for j in jugadas{
+        if j.cartas_restantes == 0 {
+            return true;
+        }
+    }
+
+    return false;
 }
