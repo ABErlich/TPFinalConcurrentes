@@ -169,7 +169,26 @@ fn contabilizar_puntos(jugadas: &Vec<(mazo::Carta, usize)>) -> Vec<(usize, f64)>
 }
 
 
-fn _contabilizar_puntos_ronda_rustica(jugadas: Vec<(mazo::Carta, usize)>){
-    let _primer_jugador = &jugadas.first().unwrap().1;
-    let _ultimo_jugador = &jugadas.last().unwrap().1;
+fn _contabilizar_puntos_ronda_rustica(jugadas: &Vec<(mazo::Carta, usize)>) -> Vec<(usize, f64)>{
+    const PUNTOS_POR_SALIR_PRIMERO: f64 = 1.0;
+    const PUNTOS_POR_SALIR_ULTIMO: f64 = -5.0;
+
+    let mut ganadores = contabilizar_puntos(&jugadas);
+    let primer_jugador = jugadas.first().unwrap();
+    let ultimo_jugador = jugadas.last().unwrap();
+
+
+    let idx_primero = ganadores.iter().position(|j| j.0 == primer_jugador.1 );
+    match idx_primero {
+        Some(idx_primero) => ganadores[idx_primero].1 += PUNTOS_POR_SALIR_PRIMERO,
+        None => ganadores.push((primer_jugador.1, PUNTOS_POR_SALIR_PRIMERO))
+    }
+
+    let idx_ultimo = ganadores.iter().position(|j| j.0 == ultimo_jugador.1 );
+    match idx_ultimo {
+        Some(idx_ultimo) => ganadores[idx_ultimo].1 += PUNTOS_POR_SALIR_ULTIMO,
+        None => ganadores.push((ultimo_jugador.1, PUNTOS_POR_SALIR_ULTIMO))
+    }
+
+    return ganadores;
 }
