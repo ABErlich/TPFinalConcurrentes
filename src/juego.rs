@@ -1,23 +1,7 @@
 use super::*;
 
-
-// pub struct SincronizadorCoordinador {
-//     pub jugadores_handler: Vec<thread::JoinHandle<()>>,
-//     pub jugadores_channels: Vec<Sender<mazo::Carta>>,
-//     pub jugadores_ronda: Vec<Sender<bool>>,
-//     pub pilon_central_cartas: Receiver<(mazo::Carta, usize)>,
-//     pub barrier: Arc<Barrier>
-// }
-
-// pub struct SincronizadorJugador{
-//     pub cartas_receiver: Receiver<mazo::Carta>,
-//     pub ronda_receiver: Receiver<bool>,
-//     pub pilon_central_cartas: Sender<(mazo::Carta, usize)>,
-//     pub barrier: Arc<Barrier>
-// }
-
 // Estado inicial, se crean los jugadores y se reparten las cartas
-pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_jugadores: usize) -> (sinc::SincronizadorCoordinador, usize) {
+pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_jugadores: usize) -> sinc::SincronizadorCoordinador {
 
     let mut jugadores = vec![];
     let mut jugadores_channels_sender = vec![];
@@ -63,44 +47,53 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 
     barrier.wait();
 
-    return (sinc::SincronizadorCoordinador{jugadores_handler: jugadores, 
-                                pilon_central_cartas: pilon_central_receiver,
-                                jugadores_channels: jugadores_channels_sender,
-                                barrier: barrier,
-                                jugadores_ronda: jugadores_channels_ronda}, cartas_por_jugador);
+    return sinc::SincronizadorCoordinador {
+        jugadores_handler: jugadores, 
+        pilon_central_cartas: pilon_central_receiver,
+        jugadores_channels: jugadores_channels_sender,
+        barrier: barrier,
+        jugadores_ronda: jugadores_channels_ronda
+    };
 }
 
 
 pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) {
-    let tipo_de_ronda : bool = sortear_ronda(&log);
+    let _tipo_de_ronda : bool = sortear_ronda(&log);
 
-    for send_ronda_player in sinc.jugadores_ronda.iter(){
-        send_ronda_player.send(tipo_de_ronda).unwrap();
-    }
+
+    //if tipo_de_ronda {
+    let cartas_jugadas = ronda_normal(&log, &sinc);
+    //}else{
+        //ronda_rustica(&log, cartas_jugadores);
+    //}
+
+    contabilizar_puntos(cartas_jugadas);
+
+}
+
+
+fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> Vec<(mazo::Carta, usize)> {
 
     let mut cartas_jugadores: Vec<(mazo::Carta, usize)> = vec![];
 
-    for _i in 0..sinc.jugadores_channels.len() {
+    for i in 0..sinc.jugadores_channels.len() {
+        // Le doy el permiso para jugar
+        logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
+        sinc.jugadores_ronda[i].send(true).unwrap();
+
+        // recibo la carta que jugo
         let carta = sinc.pilon_central_cartas.recv().unwrap();
         logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", carta.0.numero, carta.0.palo, carta.1));
         cartas_jugadores.push(carta);
+
     }
 
-    if tipo_de_ronda {
-        ronda_normal(&log, cartas_jugadores);
-    }else{
-        ronda_rustica(&log, cartas_jugadores);
-    }
-
-}
-
-
-fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, _cartas: Vec<(mazo::Carta, usize)>) {
-    //TODO: Funcionalidad ronda normal
     logger::log(&log, "Termino ronda normal\n".to_string());
+
+    return cartas_jugadores;
 }
 
-fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, _cartas: Vec<(mazo::Carta, usize)>) {
+fn _ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, _cartas: Vec<(mazo::Carta, usize)>) {
     //TODO: Funcionalidad ronda rustica
     logger::log(&log, "Termino ronda rustica\n".to_string());
 }
@@ -120,4 +113,9 @@ fn sortear_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>) -> bool
         return false;
     }
     
+}
+
+fn contabilizar_puntos(cartas: Vec<(mazo::Carta, usize)>){
+
+
 }
