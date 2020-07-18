@@ -23,8 +23,9 @@ fn main() {
         let resumen = juego::iniciar_ronda(&log, &coordinador_sinc);
 
         for p in resumen.jugadores_puntos {
-            logger::log(&log, format!("Jugador: {} puntos {}\n", p.0, p.1));
+            logger::log(&log, format!("Jugador {}: sumo {} puntos \n", p.0, p.1));
         }
+        logger::log(&log, "-- Termino ronda --\n".to_string());
 
         // TODO: Cambiar la condicion de corte
         if resumen.ultima_ronda {

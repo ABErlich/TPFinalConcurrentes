@@ -73,17 +73,21 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 
 pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> ResumenRonda {
     
-    let mut jugadas = Vec::new();
+    let jugadas;
+    let puntos;
 
-    if sortear_ronda() > 0.0 {
-        logger::log(&log, "Ronda normal\n".to_string());
+    if sortear_ronda() > 0.5 {
+        logger::log(&log, " -- Iniciando ronda normal --\n".to_string());
         jugadas = ronda_normal(&log, &sinc);
+        puntos = contabilizar_puntos(&jugadas);
     } else {
-        logger::log(&log, "Iniciando ronda rustica\n".to_string());
+        logger::log(&log, "-- Iniciando ronda rustica --\n".to_string());
+        jugadas = ronda_rustica(&log, &sinc);
+        puntos = contabilizar_puntos_ronda_rustica(&jugadas);
     }
 
     let resumen = ResumenRonda {
-        jugadores_puntos: contabilizar_puntos(&jugadas),
+        jugadores_puntos: puntos,
         jugador_suspendido: 100,
         ultima_ronda: ultima_ronda(&jugadas)
     };
@@ -113,9 +117,9 @@ fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &s
     return cartas_jugadores;
 }
 
-fn _ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> Vec<(mazo::Carta, usize)>{
+fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> Vec<Jugada>{
     //TODO: Funcionalidad ronda rustica
-    let mut cartas_jugadores: Vec<(mazo::Carta, usize)> = vec![];
+    let mut cartas_jugadores: Vec<Jugada> = vec![];
 
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
@@ -124,13 +128,11 @@ fn _ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: 
     }
 
     for _i in 0..sinc.jugadores_channels.len() {
-        // recibo la carta que jugo
-        let carta = sinc.pilon_central_cartas.recv().unwrap();
-        logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", carta.0.numero, carta.0.palo, carta.1));
-        cartas_jugadores.push(carta);
+         // recibo la carta que jugo
+         let jugada = sinc.pilon_central_cartas.recv().unwrap();
+         logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", jugada.carta.numero, jugada.carta.palo, jugada.numero_jugador));
+         cartas_jugadores.push(jugada);
     }
-
-    logger::log(&log, "Termino ronda rustica\n".to_string());
 
     return cartas_jugadores;
 }
@@ -188,7 +190,7 @@ fn contabilizar_puntos(jugadas: &Vec<Jugada>) -> Vec<(usize, f64)> {
     return ganadores;
 }
 
-fn _contabilizar_puntos_ronda_rustica(jugadas: &Vec<(mazo::Carta, usize)>) -> Vec<(usize, f64)>{
+fn contabilizar_puntos_ronda_rustica(jugadas: &Vec<Jugada>) -> Vec<(usize, f64)>{
     const PUNTOS_POR_SALIR_PRIMERO: f64 = 1.0;
     const PUNTOS_POR_SALIR_ULTIMO: f64 = -5.0;
 
@@ -197,19 +199,20 @@ fn _contabilizar_puntos_ronda_rustica(jugadas: &Vec<(mazo::Carta, usize)>) -> Ve
     let ultimo_jugador = jugadas.last().unwrap();
 
 
-    let idx_primero = ganadores.iter().position(|j| j.0 == primer_jugador.1 );
+    let idx_primero = ganadores.iter().position(|j| j.0 == primer_jugador.numero_jugador );
     match idx_primero {
         Some(idx_primero) => ganadores[idx_primero].1 += PUNTOS_POR_SALIR_PRIMERO,
-        None => ganadores.push((primer_jugador.1, PUNTOS_POR_SALIR_PRIMERO))
+        None => ganadores.push((primer_jugador.numero_jugador, PUNTOS_POR_SALIR_PRIMERO))
     }
 
-    let idx_ultimo = ganadores.iter().position(|j| j.0 == ultimo_jugador.1 );
+    let idx_ultimo = ganadores.iter().position(|j| j.0 == ultimo_jugador.numero_jugador );
     match idx_ultimo {
         Some(idx_ultimo) => ganadores[idx_ultimo].1 += PUNTOS_POR_SALIR_ULTIMO,
-        None => ganadores.push((ultimo_jugador.1, PUNTOS_POR_SALIR_ULTIMO))
+        None => ganadores.push((ultimo_jugador.numero_jugador, PUNTOS_POR_SALIR_ULTIMO))
     }
 
     return ganadores;
+}
 
 fn ultima_ronda(jugadas: &Vec<Jugada>) -> bool {
 
