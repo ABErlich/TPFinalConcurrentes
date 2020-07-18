@@ -94,9 +94,26 @@ fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &s
     return cartas_jugadores;
 }
 
-fn _ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, _cartas: Vec<(mazo::Carta, usize)>) {
+fn _ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> Vec<(mazo::Carta, usize)>{
     //TODO: Funcionalidad ronda rustica
+    let mut cartas_jugadores: Vec<(mazo::Carta, usize)> = vec![];
+
+    for i in 0..sinc.jugadores_channels.len() {
+        // Le doy el permiso para jugar
+        logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
+        sinc.jugadores_ronda[i].send(true).unwrap();
+    }
+
+    for _i in 0..sinc.jugadores_channels.len() {
+        // recibo la carta que jugo
+        let carta = sinc.pilon_central_cartas.recv().unwrap();
+        logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", carta.0.numero, carta.0.palo, carta.1));
+        cartas_jugadores.push(carta);
+    }
+
     logger::log(&log, "Termino ronda rustica\n".to_string());
+
+    return cartas_jugadores;
 }
 
 
@@ -136,4 +153,10 @@ fn contabilizar_puntos(jugadas: Vec<(mazo::Carta, usize)>) -> Vec<(usize, usize)
     // }
     
     return ganadores;
+}
+
+
+fn _contabilizar_puntos_ronda_rustica(jugadas: Vec<(mazo::Carta, usize)>){
+    let _primer_jugador = &jugadas.first().unwrap().1;
+    let _ultimo_jugador = &jugadas.last().unwrap().1;
 }
