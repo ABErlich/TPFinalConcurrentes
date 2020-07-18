@@ -15,16 +15,18 @@ fn main() {
     let n_jugadores = config.player_count as usize;
     let log = logger::crear_log();
     let mut numero_ronda = 1;
+    let mut jugador_suspendido = 0;
 
     let coordinador_sinc = juego::iniciar_juego(&log, n_jugadores);
 
     loop {
         logger::log(&log, format!("Iniciando ronda {}.\n", numero_ronda));
-        let resumen = juego::iniciar_ronda(&log, &coordinador_sinc);
+        let resumen = juego::iniciar_ronda(&log, &coordinador_sinc, jugador_suspendido);
 
         for p in resumen.jugadores_puntos {
             logger::log(&log, format!("Jugador {}: sumo {} puntos \n", p.0, p.1));
         }
+        jugador_suspendido = resumen.jugador_suspendido;
         logger::log(&log, "-- Termino ronda --\n".to_string());
 
         // TODO: Cambiar la condicion de corte

@@ -71,24 +71,28 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 }
 
 
-pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> ResumenRonda {
+pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador, jugador_suspendido: usize) -> ResumenRonda {
     
     let jugadas;
     let puntos;
+    let mut jugador_a_suspender: usize = 0;
 
     if sortear_ronda() > 0.5 {
         logger::log(&log, " -- Iniciando ronda normal --\n".to_string());
-        jugadas = ronda_normal(&log, &sinc);
+        jugadas = ronda_normal(&log, &sinc, jugador_suspendido);
         puntos = contabilizar_puntos(&jugadas);
     } else {
         logger::log(&log, "-- Iniciando ronda rustica --\n".to_string());
-        jugadas = ronda_rustica(&log, &sinc);
-        puntos = contabilizar_puntos_ronda_rustica(&jugadas);
+        jugadas = ronda_rustica(&log, &sinc, jugador_suspendido);
+        let result = contabilizar_puntos_ronda_rustica(&jugadas);
+        puntos = result.0;
+        jugador_a_suspender = result.1;
+        logger::log(&log, format!("Jugador {} suspendido\n", jugador_a_suspender));
     }
 
     let resumen = ResumenRonda {
         jugadores_puntos: puntos,
-        jugador_suspendido: 100,
+        jugador_suspendido: jugador_a_suspender,
         ultima_ronda: ultima_ronda(&jugadas)
     };
 
@@ -98,40 +102,45 @@ pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sin
 }
 
 
-fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> Vec<Jugada> {
+fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador, jugador_suspendido: usize) -> Vec<Jugada> {
 
     let mut cartas_jugadores: Vec<Jugada> = vec![];
 
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
         // logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
-        sinc.jugadores_ronda[i].send(true).unwrap();
+        if !(i+1 == jugador_suspendido) {
+            sinc.jugadores_ronda[i].send(true).unwrap();
 
-        // recibo la carta que jugo
-        let jugada = sinc.pilon_central_cartas.recv().unwrap();
-        logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", jugada.carta.numero, jugada.carta.palo, jugada.numero_jugador));
-        cartas_jugadores.push(jugada);
-
+            // recibo la carta que jugo
+            let jugada = sinc.pilon_central_cartas.recv().unwrap();
+            logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", jugada.carta.numero, jugada.carta.palo, jugada.numero_jugador));
+            cartas_jugadores.push(jugada);
+        }
     }
 
     return cartas_jugadores;
 }
 
-fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) -> Vec<Jugada>{
+fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador, jugador_suspendido: usize) -> Vec<Jugada>{
     //TODO: Funcionalidad ronda rustica
     let mut cartas_jugadores: Vec<Jugada> = vec![];
 
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
-        logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
-        sinc.jugadores_ronda[i].send(true).unwrap();
+        if !(i+1 == jugador_suspendido) {
+            logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
+            sinc.jugadores_ronda[i].send(true).unwrap();
+        }
     }
 
-    for _i in 0..sinc.jugadores_channels.len() {
-         // recibo la carta que jugo
-         let jugada = sinc.pilon_central_cartas.recv().unwrap();
-         logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", jugada.carta.numero, jugada.carta.palo, jugada.numero_jugador));
-         cartas_jugadores.push(jugada);
+    for i in 0..sinc.jugadores_channels.len() {
+        // recibo la carta que jugo
+        if !(i+1 == jugador_suspendido) {
+            let jugada = sinc.pilon_central_cartas.recv().unwrap();
+            logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", jugada.carta.numero, jugada.carta.palo, jugada.numero_jugador));
+            cartas_jugadores.push(jugada);
+        }
     }
 
     return cartas_jugadores;
@@ -190,7 +199,7 @@ fn contabilizar_puntos(jugadas: &Vec<Jugada>) -> Vec<(usize, f64)> {
     return ganadores;
 }
 
-fn contabilizar_puntos_ronda_rustica(jugadas: &Vec<Jugada>) -> Vec<(usize, f64)>{
+fn contabilizar_puntos_ronda_rustica(jugadas: &Vec<Jugada>) -> (Vec<(usize, f64)>, usize) {
     const PUNTOS_POR_SALIR_PRIMERO: f64 = 1.0;
     const PUNTOS_POR_SALIR_ULTIMO: f64 = -5.0;
 
@@ -211,7 +220,7 @@ fn contabilizar_puntos_ronda_rustica(jugadas: &Vec<Jugada>) -> Vec<(usize, f64)>
         None => ganadores.push((ultimo_jugador.numero_jugador, PUNTOS_POR_SALIR_ULTIMO))
     }
 
-    return ganadores;
+    return (ganadores, ultimo_jugador.numero_jugador);
 }
 
 fn ultima_ronda(jugadas: &Vec<Jugada>) -> bool {
