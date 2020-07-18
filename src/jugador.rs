@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_jugador: usize, organizador: juego::SincronizadorJugador, cant_cartas: usize, cant_rondas: usize) {
+pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_jugador: usize, organizador: sinc::SincronizadorJugador, cant_cartas: usize) {
     let mut mis_cartas = Vec::new();
 
     for _i in 0..cant_cartas {
@@ -21,7 +21,7 @@ pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_ju
         }
         organizador.pilon_central_cartas.send((mis_cartas[round_number-1].clone(), numero_jugador)).unwrap();
 
-        if round_number == cant_rondas {
+        if round_number == 4 {
             break;
         }
         round_number += 1;

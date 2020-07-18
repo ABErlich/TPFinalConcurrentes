@@ -1,22 +1,23 @@
 use super::*;
 
-pub struct SincronizadorCoordinador {
-    pub jugadores_handler: Vec<thread::JoinHandle<()>>,
-    pub jugadores_channels: Vec<Sender<mazo::Carta>>,
-    pub jugadores_ronda: Vec<Sender<bool>>,
-    pub pilon_central_cartas: Receiver<(mazo::Carta, usize)>,
-    pub barrier: Arc<Barrier>
-}
 
-pub struct SincronizadorJugador{
-    pub cartas_receiver: Receiver<mazo::Carta>,
-    pub ronda_receiver: Receiver<bool>,
-    pub pilon_central_cartas: Sender<(mazo::Carta, usize)>,
-    pub barrier: Arc<Barrier>
-}
+// pub struct SincronizadorCoordinador {
+//     pub jugadores_handler: Vec<thread::JoinHandle<()>>,
+//     pub jugadores_channels: Vec<Sender<mazo::Carta>>,
+//     pub jugadores_ronda: Vec<Sender<bool>>,
+//     pub pilon_central_cartas: Receiver<(mazo::Carta, usize)>,
+//     pub barrier: Arc<Barrier>
+// }
+
+// pub struct SincronizadorJugador{
+//     pub cartas_receiver: Receiver<mazo::Carta>,
+//     pub ronda_receiver: Receiver<bool>,
+//     pub pilon_central_cartas: Sender<(mazo::Carta, usize)>,
+//     pub barrier: Arc<Barrier>
+// }
 
 // Estado inicial, se crean los jugadores y se reparten las cartas
-pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_jugadores: usize) -> (SincronizadorCoordinador, usize) {
+pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_jugadores: usize) -> (sinc::SincronizadorCoordinador, usize) {
 
     let mut jugadores = vec![];
     let mut jugadores_channels_sender = vec![];
@@ -28,19 +29,23 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 
     // Lanzo los jugadores
     for i in 1..n_jugadores + 1 {
+
         let (sender_jugador, receiver_jugador) = channel::<mazo::Carta>();
         let (sender_ronda, receiver_ronda) = channel::<bool>();
         jugadores_channels_sender.push(sender_jugador);
         jugadores_channels_ronda.push(sender_ronda);
-        let sinc = SincronizadorJugador{ cartas_receiver: receiver_jugador, 
+
+        let sinc = sinc::SincronizadorJugador { 
+            cartas_receiver: receiver_jugador, 
             pilon_central_cartas: pilon_central_sender.clone(),
             barrier: barrier.clone(),
-            ronda_receiver: receiver_ronda};
+            ronda_receiver: receiver_ronda
+        };
 
         let log = Arc::clone(&log);
         jugadores.push( thread::spawn(move || 
             { 
-                jugador::jugador(&log, i, sinc, cartas_por_jugador, cartas_por_jugador);
+                jugador::jugador(&log, i, sinc, cartas_por_jugador);
             }
         ));
     }
@@ -58,7 +63,7 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 
     barrier.wait();
 
-    return (SincronizadorCoordinador{jugadores_handler: jugadores, 
+    return (sinc::SincronizadorCoordinador{jugadores_handler: jugadores, 
                                 pilon_central_cartas: pilon_central_receiver,
                                 jugadores_channels: jugadores_channels_sender,
                                 barrier: barrier,
@@ -66,7 +71,7 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 }
 
 
-pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &SincronizadorCoordinador) {
+pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador) {
     let tipo_de_ronda : bool = sortear_ronda(&log);
 
     for send_ronda_player in sinc.jugadores_ronda.iter(){
