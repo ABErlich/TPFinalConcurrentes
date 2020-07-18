@@ -20,7 +20,11 @@ fn main() {
 
     loop {
         
-        juego::iniciar_ronda(&log, &coordinador_sinc);
+        let puntos = juego::iniciar_ronda(&log, &coordinador_sinc);
+
+        for p in puntos {
+            logger::log(&log, format!("Jugador: {} puntos {}\n", p.0, p.1));
+        }
 
         // TODO: Cambiar la condicion de corte
         if round_number == 4 {
