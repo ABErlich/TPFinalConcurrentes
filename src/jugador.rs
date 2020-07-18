@@ -7,19 +7,19 @@ pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_ju
     logger::log(&log, format!("JUGADOR {} LISTO\n", numero_jugador));
     organizador.barrier.wait(); // aviso que termino de recibir las cartas
     
-    let mut round_number = 1;
+    let mut next_card = 0;
     loop {
         
         let permiso = esperar_permiso(&organizador);
 
         // Si tengo permiso para jugar, si recibo false es porque se termino el juego
         if permiso {
-            jugar_carta(&(mis_cartas[round_number-1]), &organizador, numero_jugador);
+            jugar_carta(&(mis_cartas[next_card]), &organizador, numero_jugador, mis_cartas.len() - next_card - 1);
         } else {
             break;
         }
         
-        round_number += 1;
+        next_card += 1;
     }
 }
 
@@ -44,6 +44,8 @@ fn esperar_permiso(organizador: &sinc::SincronizadorJugador) -> bool {
     return permiso;
 }
 
-fn jugar_carta(carta: &mazo::Carta, organizador: &sinc::SincronizadorJugador, numero_jugador: usize) {
-    organizador.pilon_central_cartas.send((carta.clone(), numero_jugador)).unwrap();
+fn jugar_carta(carta: &mazo::Carta, organizador: &sinc::SincronizadorJugador, numero_jugador: usize, cartas_restantes: usize) {
+    organizador.pilon_central_cartas.send(
+        juego::Jugada { carta: carta.clone(), numero_jugador: numero_jugador, cartas_restantes: cartas_restantes}
+    ).unwrap();
 }

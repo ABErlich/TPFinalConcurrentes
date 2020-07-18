@@ -14,24 +14,24 @@ fn main() {
     let config = utilities::parse_parameters(std::env::args().collect());
     let n_jugadores = config.player_count as usize;
     let log = logger::crear_log();
-    let mut round_number = 1;
+    let mut numero_ronda = 1;
 
     let coordinador_sinc = juego::iniciar_juego(&log, n_jugadores);
 
     loop {
-        
-        let puntos = juego::iniciar_ronda(&log, &coordinador_sinc);
+        logger::log(&log, format!("Iniciando ronda {}.\n", numero_ronda));
+        let resumen = juego::iniciar_ronda(&log, &coordinador_sinc);
 
-        for p in puntos {
+        for p in resumen.jugadores_puntos {
             logger::log(&log, format!("Jugador: {} puntos {}\n", p.0, p.1));
         }
 
         // TODO: Cambiar la condicion de corte
-        if round_number == 4 {
+        if resumen.ultima_ronda {
             juego::terminar_juego(&log, &coordinador_sinc);
             break;
         }
-        round_number += 1;
+        numero_ronda += 1;
     }
 
 
