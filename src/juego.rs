@@ -123,13 +123,13 @@ fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &s
 }
 
 fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador, jugador_suspendido: usize) -> Vec<Jugada>{
-    //TODO: Funcionalidad ronda rustica
+
     let mut cartas_jugadores: Vec<Jugada> = vec![];
 
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
         if !(i+1 == jugador_suspendido) {
-            logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
+            //logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
             sinc.jugadores_ronda[i].send(true).unwrap();
         }
     }
