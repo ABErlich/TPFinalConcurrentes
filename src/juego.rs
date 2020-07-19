@@ -184,14 +184,14 @@ fn contabilizar_puntos(jugadas: &Vec<Jugada>) -> Vec<(usize, f64)> {
 
     // cuantos ganadores tengo
     for jugada in jugadas.iter() {        
-        if  jugada.carta.numero == carta_maxima.numero  {
+        if  jugada.carta.valor == carta_maxima.valor  {
             cantidad_ganadores +=  1.;
         }
     }
 
     // armo el resultado
     for jugada in jugadas.iter() {        
-        if  jugada.carta.numero == carta_maxima.numero {
+        if  jugada.carta.valor == carta_maxima.valor {
             ganadores.push((jugada.numero_jugador, puntos_a_repartir / cantidad_ganadores))
         }
     }
@@ -233,4 +233,86 @@ fn ultima_ronda(jugadas: &Vec<Jugada>) -> bool {
 
     return false;
 
+}
+
+
+
+
+
+#[test]
+fn contabilizador_puntos_1() {
+
+    let mut jugadas = Vec::new();
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "1".to_string(), palo: "picas".to_string(), valor: 8 }, numero_jugador: 1, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "2".to_string(), palo: "picas".to_string(), valor: 2 }, numero_jugador: 2, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "3".to_string(), palo: "picas".to_string(), valor: 3 }, numero_jugador: 3, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "4".to_string(), palo: "picas".to_string(), valor: 4 }, numero_jugador: 4, cartas_restantes: 0 });
+
+    let resultado = contabilizar_puntos(&jugadas);
+
+    assert!(resultado.contains(&(1, 10.)));
+}
+
+
+#[test]
+fn contabilizador_puntos_2() {
+
+    let mut jugadas = Vec::new();
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "1".to_string(), palo: "picas".to_string(), valor: 8 }, numero_jugador: 1, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "2".to_string(), palo: "picas".to_string(), valor: 8 }, numero_jugador: 2, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "3".to_string(), palo: "picas".to_string(), valor: 3 }, numero_jugador: 3, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "4".to_string(), palo: "picas".to_string(), valor: 4 }, numero_jugador: 4, cartas_restantes: 0 });
+
+    let resultado = contabilizar_puntos(&jugadas);
+
+    assert!(resultado.contains(&(1, 5.)));
+}
+
+
+
+
+#[test]
+fn contabilizador_puntos_rustica_1() {
+
+    let mut jugadas = Vec::new();
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "1".to_string(), palo: "picas".to_string(), valor: 8 }, numero_jugador: 1, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "2".to_string(), palo: "picas".to_string(), valor: 7 }, numero_jugador: 4, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "3".to_string(), palo: "picas".to_string(), valor: 3 }, numero_jugador: 3, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "4".to_string(), palo: "picas".to_string(), valor: 4 }, numero_jugador: 2, cartas_restantes: 0 });
+
+    let resultado = contabilizar_puntos_ronda_rustica(&jugadas);
+
+    assert!(resultado.1 == 2);
+    
+}
+
+
+#[test]
+fn contabilizador_puntos_rustica_2() {
+
+    let mut jugadas = Vec::new();
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "1".to_string(), palo: "picas".to_string(), valor: 8 }, numero_jugador: 1, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "2".to_string(), palo: "picas".to_string(), valor: 7 }, numero_jugador: 4, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "3".to_string(), palo: "picas".to_string(), valor: 3 }, numero_jugador: 3, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "4".to_string(), palo: "picas".to_string(), valor: 4 }, numero_jugador: 2, cartas_restantes: 0 });
+
+    let resultado = contabilizar_puntos_ronda_rustica(&jugadas);
+    assert!(resultado.0.contains(&(1, 11.)));
+    
+}
+
+
+#[test]
+fn contabilizador_puntos_rustica_3() {
+
+    let mut jugadas = Vec::new();
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "1".to_string(), palo: "picas".to_string(), valor: 8 }, numero_jugador: 1, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "2".to_string(), palo: "picas".to_string(), valor: 7 }, numero_jugador: 4, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "3".to_string(), palo: "picas".to_string(), valor: 3 }, numero_jugador: 3, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: "4".to_string(), palo: "picas".to_string(), valor: 4 }, numero_jugador: 2, cartas_restantes: 0 });
+
+    let resultado = contabilizar_puntos_ronda_rustica(&jugadas);
+
+    assert!(resultado.0.contains(&(2, -5.)));
+    
 }
