@@ -31,7 +31,7 @@ fn main() {
 
         for p in resumen.jugadores_puntos {
             puntajes[p.0 - 1] += p.1;
-            logger::log(&log, format!("Jugador {}: sacó {} puntos \n", p.0, p.1));
+            logger::log(&log, format!("Jugador {}: sacó {:.2} puntos \n", p.0, p.1));
         }
 
         jugador_suspendido = resumen.jugador_suspendido;
@@ -50,7 +50,7 @@ fn main() {
 
     logger::log(&log, "Finalizó el juego, puntajes: \n".to_string());
     for i in 0..n_jugadores {
-        logger::log(&log, format!("Jugador {} con {} puntos\n", i+1, puntajes[i]))
+        logger::log(&log, format!("Jugador {} con {:.2} puntos\n", i+1, puntajes[i]))
     }
 
 
