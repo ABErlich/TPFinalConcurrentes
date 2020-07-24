@@ -14,10 +14,14 @@ pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_ju
 
         // Veo que hago en funcion del mensaje recibido
         match permiso {
-            juego::Mensaje::JugarNormal => jugar_carta(&(mis_cartas[next_card]), &organizador, numero_jugador, mis_cartas.len() - next_card - 1),
+            juego::Mensaje::JugarNormal => {
+                jugar_carta(&(mis_cartas[next_card]), &organizador, numero_jugador, mis_cartas.len() - next_card - 1);
+                next_card += 1;
+            },
             juego::Mensaje::JugarRustica => {
                 organizador.barrier.wait();
                 jugar_carta(&(mis_cartas[next_card]), &organizador, numero_jugador, mis_cartas.len() - next_card - 1);
+                next_card += 1;
             },
             juego::Mensaje::SuspendidoEnRustica => {
                 organizador.barrier.wait();
@@ -25,7 +29,7 @@ pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_ju
             juego::Mensaje::FinDelJuego => break
         };
         
-        next_card += 1;
+        
     }
 }
 
