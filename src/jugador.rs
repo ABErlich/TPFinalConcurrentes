@@ -12,12 +12,18 @@ pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_ju
         
         let permiso = esperar_permiso(&organizador);
 
-        // Si tengo permiso para jugar, si recibo false es porque se termino el juego
-        if permiso {
-            jugar_carta(&(mis_cartas[next_card]), &organizador, numero_jugador, mis_cartas.len() - next_card - 1);
-        } else {
-            break;
-        }
+        // Veo que hago en funcion del mensaje recibido
+        match permiso {
+            juego::Mensaje::JugarNormal => jugar_carta(&(mis_cartas[next_card]), &organizador, numero_jugador, mis_cartas.len() - next_card - 1),
+            juego::Mensaje::JugarRustica => {
+                organizador.barrier.wait();
+                jugar_carta(&(mis_cartas[next_card]), &organizador, numero_jugador, mis_cartas.len() - next_card - 1);
+            },
+            juego::Mensaje::SuspendidoEnRustica => {
+                organizador.barrier.wait();
+            }
+            juego::Mensaje::FinDelJuego => break
+        };
         
         next_card += 1;
     }
@@ -38,7 +44,7 @@ fn recibir_cartas(organizador: &sinc::SincronizadorJugador, cant_cartas: usize) 
 
 }
 
-fn esperar_permiso(organizador: &sinc::SincronizadorJugador) -> bool {
+fn esperar_permiso(organizador: &sinc::SincronizadorJugador) -> juego::Mensaje {
     let permiso = organizador.ronda_receiver.recv().unwrap();
 
     return permiso;

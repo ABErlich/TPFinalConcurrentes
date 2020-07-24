@@ -1,5 +1,12 @@
 use super::*;
 
+#[derive(PartialEq)]
+pub enum Mensaje {
+    JugarNormal,
+    JugarRustica,
+    FinDelJuego,
+    SuspendidoEnRustica
+}
 
 pub struct Jugada {
     pub carta: mazo::Carta,
@@ -29,7 +36,7 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
     for i in 1..n_jugadores + 1 {
 
         let (sender_jugador, receiver_jugador) = channel::<mazo::Carta>();
-        let (sender_ronda, receiver_ronda) = channel::<bool>();
+        let (sender_ronda, receiver_ronda) = channel::<Mensaje>();
         jugadores_channels_sender.push(sender_jugador);
         jugadores_channels_ronda.push(sender_ronda);
 
@@ -110,7 +117,7 @@ fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &s
         // Le doy el permiso para jugar
         // logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
         if !(i+1 == jugador_suspendido) {
-            sinc.jugadores_ronda[i].send(true).unwrap();
+            sinc.jugadores_ronda[i].send(Mensaje::JugarNormal).unwrap();
 
             // recibo la carta que jugo
             let jugada = sinc.pilon_central_cartas.recv().unwrap();
@@ -129,10 +136,13 @@ fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
         if !(i+1 == jugador_suspendido) {
-            //logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
-            sinc.jugadores_ronda[i].send(true).unwrap();
+            sinc.jugadores_ronda[i].send(Mensaje::JugarRustica).unwrap();
+        } else {
+            sinc.jugadores_ronda[i].send(Mensaje::SuspendidoEnRustica).unwrap()
         }
     }
+
+    sinc.barrier.wait();
 
     for i in 0..sinc.jugadores_channels.len() {
         // recibo la carta que jugo
@@ -152,7 +162,7 @@ pub fn terminar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, si
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
         logger::log(&log, format!("Avisandole a {} que se termino el juego\n", i + 1));
-        sinc.jugadores_ronda[i].send(false).unwrap();
+        sinc.jugadores_ronda[i].send(Mensaje::FinDelJuego).unwrap();
 
     }
 }
