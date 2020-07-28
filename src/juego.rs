@@ -1,5 +1,12 @@
 use super::*;
 
+#[derive(PartialEq)]
+pub enum Mensaje {
+    JugarNormal,
+    JugarRustica,
+    FinDelJuego,
+    SuspendidoEnRustica
+}
 
 pub struct Jugada {
     pub carta: mazo::Carta,
@@ -29,7 +36,7 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
     for i in 1..n_jugadores + 1 {
 
         let (sender_jugador, receiver_jugador) = channel::<mazo::Carta>();
-        let (sender_ronda, receiver_ronda) = channel::<bool>();
+        let (sender_ronda, receiver_ronda) = channel::<Mensaje>();
         jugadores_channels_sender.push(sender_jugador);
         jugadores_channels_ronda.push(sender_ronda);
 
@@ -49,7 +56,7 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
     }
 
     let mut rng = thread_rng();
-    let mut cartas = mazo.cartas.clone();
+    let mut cartas = mazo.cartas;
     cartas.shuffle(&mut rng); // Mezclo las cartas
 
     for i in 0..(cartas_por_jugador * n_jugadores) {
@@ -61,13 +68,13 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 
     barrier.wait();
 
-    return sinc::SincronizadorCoordinador {
+    sinc::SincronizadorCoordinador {
         jugadores_handler: jugadores, 
         pilon_central_cartas: pilon_central_receiver,
         jugadores_channels: jugadores_channels_sender,
-        barrier: barrier,
+        barrier,
         jugadores_ronda: jugadores_channels_ronda
-    };
+    }
 }
 
 
@@ -90,14 +97,12 @@ pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sin
         logger::log(&log, format!("Jugador {} suspendido\n", jugador_a_suspender));
     }
 
-    let resumen = ResumenRonda {
+    ResumenRonda {
         jugadores_puntos: puntos,
         jugador_suspendido: jugador_a_suspender,
         ultima_ronda: ultima_ronda(&jugadas)
-    };
+    }
 
-
-    return resumen;
 
 }
 
@@ -109,17 +114,17 @@ fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &s
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
         // logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
-        if !(i+1 == jugador_suspendido) {
-            sinc.jugadores_ronda[i].send(true).unwrap();
+        if i+1 != jugador_suspendido {
+            sinc.jugadores_ronda[i].send(Mensaje::JugarNormal).unwrap();
 
             // recibo la carta que jugo
             let jugada = sinc.pilon_central_cartas.recv().unwrap();
-            logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", jugada.carta.numero, jugada.carta.palo, jugada.numero_jugador));
+            logger::log(&log, format!("Coordinador recibi: {} del jugador {}\n", jugada.carta.card_to_string(), jugada.numero_jugador));
             cartas_jugadores.push(jugada);
         }
     }
 
-    return cartas_jugadores;
+    cartas_jugadores
 }
 
 fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador, jugador_suspendido: usize) -> Vec<Jugada>{
@@ -128,22 +133,25 @@ fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &
 
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
-        if !(i+1 == jugador_suspendido) {
-            //logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
-            sinc.jugadores_ronda[i].send(true).unwrap();
+        if i+1 != jugador_suspendido {
+            sinc.jugadores_ronda[i].send(Mensaje::JugarRustica).unwrap();
+        } else {
+            sinc.jugadores_ronda[i].send(Mensaje::SuspendidoEnRustica).unwrap()
         }
     }
 
+    sinc.barrier.wait();
+
     for i in 0..sinc.jugadores_channels.len() {
         // recibo la carta que jugo
-        if !(i+1 == jugador_suspendido) {
+        if i+1 != jugador_suspendido {
             let jugada = sinc.pilon_central_cartas.recv().unwrap();
-            logger::log(&log, format!("Coordinador recibi: {} de {} del jugador {}\n", jugada.carta.numero, jugada.carta.palo, jugada.numero_jugador));
+            logger::log(&log, format!("Coordinador recibi: {} del jugador {}\n", jugada.carta.card_to_string(), jugada.numero_jugador));
             cartas_jugadores.push(jugada);
         }
     }
 
-    return cartas_jugadores;
+    cartas_jugadores
 }
 
 
@@ -152,7 +160,7 @@ pub fn terminar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, si
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
         logger::log(&log, format!("Avisandole a {} que se termino el juego\n", i + 1));
-        sinc.jugadores_ronda[i].send(false).unwrap();
+        sinc.jugadores_ronda[i].send(Mensaje::FinDelJuego).unwrap();
 
     }
 }
@@ -161,14 +169,13 @@ pub fn terminar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, si
 fn sortear_ronda() -> f64 {
 
     let mut rng = thread_rng();
-    let random = rng.gen_range(0., 1.0);
-    return random;
+    rng.gen_range(0., 1.0)
     
 }
 
 
 // Devuelve un vector de tuplas de la forma (numero_jugador, puntos_ganados)
-fn contabilizar_puntos(jugadas: &Vec<Jugada>) -> Vec<(usize, f64)> {
+fn contabilizar_puntos(jugadas: &[Jugada]) -> Vec<(usize, f64)> {
 
     let puntos_a_repartir = 10.;
     let mut cantidad_ganadores = 0.;
@@ -177,29 +184,29 @@ fn contabilizar_puntos(jugadas: &Vec<Jugada>) -> Vec<(usize, f64)> {
 
     // veo cual es la carta maximas
     for jugada in jugadas.iter() {
-        if jugada.carta.valor > carta_maxima.valor {
+        if jugada.carta.valor_carta() > carta_maxima.valor_carta() {
             carta_maxima = &jugada.carta;
         }
     }
 
     // cuantos ganadores tengo
     for jugada in jugadas.iter() {        
-        if  jugada.carta.valor == carta_maxima.valor  {
+        if  jugada.carta.valor_carta() == carta_maxima.valor_carta()  {
             cantidad_ganadores +=  1.;
         }
     }
 
     // armo el resultado
     for jugada in jugadas.iter() {        
-        if  jugada.carta.valor == carta_maxima.valor {
+        if  jugada.carta.valor_carta() == carta_maxima.valor_carta() {
             ganadores.push((jugada.numero_jugador, puntos_a_repartir / cantidad_ganadores))
         }
     }
     
-    return ganadores;
+    ganadores
 }
 
-fn contabilizar_puntos_ronda_rustica(jugadas: &Vec<Jugada>) -> (Vec<(usize, f64)>, usize) {
+fn contabilizar_puntos_ronda_rustica(jugadas: &[Jugada]) -> (Vec<(usize, f64)>, usize) {
     const PUNTOS_POR_SALIR_PRIMERO: f64 = 1.0;
     const PUNTOS_POR_SALIR_ULTIMO: f64 = -5.0;
 
@@ -220,10 +227,10 @@ fn contabilizar_puntos_ronda_rustica(jugadas: &Vec<Jugada>) -> (Vec<(usize, f64)
         None => ganadores.push((ultimo_jugador.numero_jugador, PUNTOS_POR_SALIR_ULTIMO))
     }
 
-    return (ganadores, ultimo_jugador.numero_jugador);
+    (ganadores, ultimo_jugador.numero_jugador)
 }
 
-fn ultima_ronda(jugadas: &Vec<Jugada>) -> bool {
+fn ultima_ronda(jugadas: &[Jugada]) -> bool {
 
     for j in jugadas{
         if j.cartas_restantes == 0 {
@@ -231,7 +238,7 @@ fn ultima_ronda(jugadas: &Vec<Jugada>) -> bool {
         }
     }
 
-    return false;
+    false
 
 }
 
@@ -243,10 +250,10 @@ fn ultima_ronda(jugadas: &Vec<Jugada>) -> bool {
 fn contabilizador_puntos_1() {
 
     let mut jugadas = Vec::new();
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "1".to_string(), palo: "picas".to_string(), valor: 8 }, numero_jugador: 1, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "2".to_string(), palo: "picas".to_string(), valor: 2 }, numero_jugador: 2, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "3".to_string(), palo: "picas".to_string(), valor: 3 }, numero_jugador: 3, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "4".to_string(), palo: "picas".to_string(), valor: 4 }, numero_jugador: 4, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::As, palo: mazo::Palo::Picas}, numero_jugador: 1, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Dos, palo: mazo::Palo::Picas}, numero_jugador: 2, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Tres, palo: mazo::Palo::Picas}, numero_jugador: 3, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Cuatro, palo: mazo::Palo::Picas}, numero_jugador: 4, cartas_restantes: 0 });
 
     let resultado = contabilizar_puntos(&jugadas);
 
@@ -258,10 +265,10 @@ fn contabilizador_puntos_1() {
 fn contabilizador_puntos_2() {
 
     let mut jugadas = Vec::new();
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "1".to_string(), palo: "picas".to_string(), valor: 8 }, numero_jugador: 1, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "2".to_string(), palo: "picas".to_string(), valor: 8 }, numero_jugador: 2, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "3".to_string(), palo: "picas".to_string(), valor: 3 }, numero_jugador: 3, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "4".to_string(), palo: "picas".to_string(), valor: 4 }, numero_jugador: 4, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::As, palo: mazo::Palo::Picas}, numero_jugador: 1, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::As, palo: mazo::Palo::Diamantes}, numero_jugador: 2, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Tres, palo: mazo::Palo::Picas}, numero_jugador: 3, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Cuatro, palo: mazo::Palo::Picas}, numero_jugador: 4, cartas_restantes: 0 });
 
     let resultado = contabilizar_puntos(&jugadas);
 
@@ -275,10 +282,10 @@ fn contabilizador_puntos_2() {
 fn contabilizador_puntos_rustica_1() {
 
     let mut jugadas = Vec::new();
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "1".to_string(), palo: "picas".to_string(), valor: 8 }, numero_jugador: 1, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "2".to_string(), palo: "picas".to_string(), valor: 7 }, numero_jugador: 4, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "3".to_string(), palo: "picas".to_string(), valor: 3 }, numero_jugador: 3, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "4".to_string(), palo: "picas".to_string(), valor: 4 }, numero_jugador: 2, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::As, palo: mazo::Palo::Picas}, numero_jugador: 1, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Dos, palo: mazo::Palo::Picas}, numero_jugador: 4, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Tres, palo: mazo::Palo::Picas}, numero_jugador: 3, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Cuatro, palo: mazo::Palo::Picas}, numero_jugador: 2, cartas_restantes: 0 });
 
     let resultado = contabilizar_puntos_ronda_rustica(&jugadas);
 
@@ -291,10 +298,10 @@ fn contabilizador_puntos_rustica_1() {
 fn contabilizador_puntos_rustica_2() {
 
     let mut jugadas = Vec::new();
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "1".to_string(), palo: "picas".to_string(), valor: 8 }, numero_jugador: 1, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "2".to_string(), palo: "picas".to_string(), valor: 7 }, numero_jugador: 4, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "3".to_string(), palo: "picas".to_string(), valor: 3 }, numero_jugador: 3, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "4".to_string(), palo: "picas".to_string(), valor: 4 }, numero_jugador: 2, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::As, palo: mazo::Palo::Picas}, numero_jugador: 1, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Dos, palo: mazo::Palo::Picas}, numero_jugador: 4, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Tres, palo: mazo::Palo::Picas}, numero_jugador: 3, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Cuatro, palo: mazo::Palo::Picas}, numero_jugador: 2, cartas_restantes: 0 });
 
     let resultado = contabilizar_puntos_ronda_rustica(&jugadas);
     assert!(resultado.0.contains(&(1, 11.)));
@@ -306,10 +313,10 @@ fn contabilizador_puntos_rustica_2() {
 fn contabilizador_puntos_rustica_3() {
 
     let mut jugadas = Vec::new();
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "1".to_string(), palo: "picas".to_string(), valor: 8 }, numero_jugador: 1, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "2".to_string(), palo: "picas".to_string(), valor: 7 }, numero_jugador: 4, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "3".to_string(), palo: "picas".to_string(), valor: 3 }, numero_jugador: 3, cartas_restantes: 0 });
-    jugadas.push(Jugada { carta: mazo::Carta { numero: "4".to_string(), palo: "picas".to_string(), valor: 4 }, numero_jugador: 2, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::As, palo: mazo::Palo::Picas}, numero_jugador: 1, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Dos, palo: mazo::Palo::Picas}, numero_jugador: 4, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Tres, palo: mazo::Palo::Picas}, numero_jugador: 3, cartas_restantes: 0 });
+    jugadas.push(Jugada { carta: mazo::Carta { numero: mazo::Numero::Cuatro, palo: mazo::Palo::Picas}, numero_jugador: 2, cartas_restantes: 0 });
 
     let resultado = contabilizar_puntos_ronda_rustica(&jugadas);
 

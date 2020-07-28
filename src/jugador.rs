@@ -12,14 +12,24 @@ pub fn jugador(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, numero_ju
         
         let permiso = esperar_permiso(&organizador);
 
-        // Si tengo permiso para jugar, si recibo false es porque se termino el juego
-        if permiso {
-            jugar_carta(&(mis_cartas[next_card]), &organizador, numero_jugador, mis_cartas.len() - next_card - 1);
-        } else {
-            break;
-        }
+        // Veo que hago en funcion del mensaje recibido
+        match permiso {
+            juego::Mensaje::JugarNormal => {
+                jugar_carta(&(mis_cartas[next_card]), &organizador, numero_jugador, mis_cartas.len() - next_card - 1);
+                next_card += 1;
+            },
+            juego::Mensaje::JugarRustica => {
+                organizador.barrier.wait();
+                jugar_carta(&(mis_cartas[next_card]), &organizador, numero_jugador, mis_cartas.len() - next_card - 1);
+                next_card += 1;
+            },
+            juego::Mensaje::SuspendidoEnRustica => {
+                organizador.barrier.wait();
+            }
+            juego::Mensaje::FinDelJuego => break
+        };
         
-        next_card += 1;
+        
     }
 }
 
@@ -34,18 +44,16 @@ fn recibir_cartas(organizador: &sinc::SincronizadorJugador, cant_cartas: usize) 
         cartas.push(carta);
     }
 
-    return cartas
+    cartas
 
 }
 
-fn esperar_permiso(organizador: &sinc::SincronizadorJugador) -> bool {
-    let permiso = organizador.ronda_receiver.recv().unwrap();
-
-    return permiso;
+fn esperar_permiso(organizador: &sinc::SincronizadorJugador) -> juego::Mensaje {
+    organizador.ronda_receiver.recv().unwrap()
 }
 
 fn jugar_carta(carta: &mazo::Carta, organizador: &sinc::SincronizadorJugador, numero_jugador: usize, cartas_restantes: usize) {
     organizador.pilon_central_cartas.send(
-        juego::Jugada { carta: carta.clone(), numero_jugador: numero_jugador, cartas_restantes: cartas_restantes}
+        juego::Jugada { carta: carta.clone(), numero_jugador, cartas_restantes}
     ).unwrap();
 }

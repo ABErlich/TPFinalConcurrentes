@@ -19,12 +19,12 @@ pub fn parse_parameters(params : Vec<String>) -> Configuration {
     };
 
     // Valido que los jugadores sean pares y >= 4
-    if player_count < 4 || player_count % 2 == 1 {
+    if player_count < 4 || player_count % 2 == 1 || player_count > 52{
         panic!("error: El numero de jugadores invalido");
     }
 
     Configuration {
-        player_count: player_count
+        player_count
     }
 }
 

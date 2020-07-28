@@ -6,7 +6,7 @@ use std::sync::{Mutex, Arc};
 
 pub fn crear_log() -> std::sync::Arc<std::sync::Mutex<std::fs::File>> {
     
-    let file = Arc::new(Mutex::new(
+    Arc::new(Mutex::new(
         match OpenOptions::new()
             .read(true)
             .write(true)
@@ -16,9 +16,7 @@ pub fn crear_log() -> std::sync::Arc<std::sync::Mutex<std::fs::File>> {
                 Ok(f)  => f,
                 Err(err) => { panic!("No se pude crear log: {}", err); }
             }
-    ));
-
-    return file;
+    ))
 }
 
 pub fn log(file : &std::sync::Arc<std::sync::Mutex<std::fs::File>> , message : String) {

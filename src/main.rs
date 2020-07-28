@@ -49,8 +49,8 @@ fn main() {
     }
 
     logger::log(&log, "Finalizó el juego, puntajes: \n".to_string());
-    for i in 0..n_jugadores {
-        logger::log(&log, format!("Jugador {} con {:.2} puntos\n", i+1, puntajes[i]))
+    for (i, puntaje) in puntajes.iter().enumerate() {
+        logger::log(&log, format!("Jugador {} con {:.2} puntos\n", i+1, puntaje))
     }
 
 
