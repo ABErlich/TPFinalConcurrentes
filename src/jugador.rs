@@ -44,18 +44,16 @@ fn recibir_cartas(organizador: &sinc::SincronizadorJugador, cant_cartas: usize) 
         cartas.push(carta);
     }
 
-    return cartas
+    cartas
 
 }
 
 fn esperar_permiso(organizador: &sinc::SincronizadorJugador) -> juego::Mensaje {
-    let permiso = organizador.ronda_receiver.recv().unwrap();
-
-    return permiso;
+    organizador.ronda_receiver.recv().unwrap()
 }
 
 fn jugar_carta(carta: &mazo::Carta, organizador: &sinc::SincronizadorJugador, numero_jugador: usize, cartas_restantes: usize) {
     organizador.pilon_central_cartas.send(
-        juego::Jugada { carta: carta.clone(), numero_jugador: numero_jugador, cartas_restantes: cartas_restantes}
+        juego::Jugada { carta: carta.clone(), numero_jugador, cartas_restantes}
     ).unwrap();
 }

@@ -56,7 +56,7 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
     }
 
     let mut rng = thread_rng();
-    let mut cartas = mazo.cartas.clone();
+    let mut cartas = mazo.cartas;
     cartas.shuffle(&mut rng); // Mezclo las cartas
 
     for i in 0..(cartas_por_jugador * n_jugadores) {
@@ -68,13 +68,13 @@ pub fn iniciar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, n_j
 
     barrier.wait();
 
-    return sinc::SincronizadorCoordinador {
+    sinc::SincronizadorCoordinador {
         jugadores_handler: jugadores, 
         pilon_central_cartas: pilon_central_receiver,
         jugadores_channels: jugadores_channels_sender,
-        barrier: barrier,
+        barrier,
         jugadores_ronda: jugadores_channels_ronda
-    };
+    }
 }
 
 
@@ -97,14 +97,12 @@ pub fn iniciar_ronda(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sin
         logger::log(&log, format!("Jugador {} suspendido\n", jugador_a_suspender));
     }
 
-    let resumen = ResumenRonda {
+    ResumenRonda {
         jugadores_puntos: puntos,
         jugador_suspendido: jugador_a_suspender,
         ultima_ronda: ultima_ronda(&jugadas)
-    };
+    }
 
-
-    return resumen;
 
 }
 
@@ -116,7 +114,7 @@ fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &s
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
         // logger::log(&log, format!("Dandole permiso a {}\n", i + 1));
-        if !(i+1 == jugador_suspendido) {
+        if i+1 != jugador_suspendido {
             sinc.jugadores_ronda[i].send(Mensaje::JugarNormal).unwrap();
 
             // recibo la carta que jugo
@@ -126,7 +124,7 @@ fn ronda_normal(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &s
         }
     }
 
-    return cartas_jugadores;
+    cartas_jugadores
 }
 
 fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &sinc::SincronizadorCoordinador, jugador_suspendido: usize) -> Vec<Jugada>{
@@ -135,7 +133,7 @@ fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &
 
     for i in 0..sinc.jugadores_channels.len() {
         // Le doy el permiso para jugar
-        if !(i+1 == jugador_suspendido) {
+        if i+1 != jugador_suspendido {
             sinc.jugadores_ronda[i].send(Mensaje::JugarRustica).unwrap();
         } else {
             sinc.jugadores_ronda[i].send(Mensaje::SuspendidoEnRustica).unwrap()
@@ -146,14 +144,14 @@ fn ronda_rustica(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, sinc: &
 
     for i in 0..sinc.jugadores_channels.len() {
         // recibo la carta que jugo
-        if !(i+1 == jugador_suspendido) {
+        if i+1 != jugador_suspendido {
             let jugada = sinc.pilon_central_cartas.recv().unwrap();
             logger::log(&log, format!("Coordinador recibi: {} del jugador {}\n", jugada.carta.card_to_string(), jugada.numero_jugador));
             cartas_jugadores.push(jugada);
         }
     }
 
-    return cartas_jugadores;
+    cartas_jugadores
 }
 
 
@@ -171,14 +169,13 @@ pub fn terminar_juego(log : &std::sync::Arc<std::sync::Mutex<std::fs::File>>, si
 fn sortear_ronda() -> f64 {
 
     let mut rng = thread_rng();
-    let random = rng.gen_range(0., 1.0);
-    return random;
+    rng.gen_range(0., 1.0)
     
 }
 
 
 // Devuelve un vector de tuplas de la forma (numero_jugador, puntos_ganados)
-fn contabilizar_puntos(jugadas: &Vec<Jugada>) -> Vec<(usize, f64)> {
+fn contabilizar_puntos(jugadas: &[Jugada]) -> Vec<(usize, f64)> {
 
     let puntos_a_repartir = 10.;
     let mut cantidad_ganadores = 0.;
@@ -206,10 +203,10 @@ fn contabilizar_puntos(jugadas: &Vec<Jugada>) -> Vec<(usize, f64)> {
         }
     }
     
-    return ganadores;
+    ganadores
 }
 
-fn contabilizar_puntos_ronda_rustica(jugadas: &Vec<Jugada>) -> (Vec<(usize, f64)>, usize) {
+fn contabilizar_puntos_ronda_rustica(jugadas: &[Jugada]) -> (Vec<(usize, f64)>, usize) {
     const PUNTOS_POR_SALIR_PRIMERO: f64 = 1.0;
     const PUNTOS_POR_SALIR_ULTIMO: f64 = -5.0;
 
@@ -230,10 +227,10 @@ fn contabilizar_puntos_ronda_rustica(jugadas: &Vec<Jugada>) -> (Vec<(usize, f64)
         None => ganadores.push((ultimo_jugador.numero_jugador, PUNTOS_POR_SALIR_ULTIMO))
     }
 
-    return (ganadores, ultimo_jugador.numero_jugador);
+    (ganadores, ultimo_jugador.numero_jugador)
 }
 
-fn ultima_ronda(jugadas: &Vec<Jugada>) -> bool {
+fn ultima_ronda(jugadas: &[Jugada]) -> bool {
 
     for j in jugadas{
         if j.cartas_restantes == 0 {
@@ -241,7 +238,7 @@ fn ultima_ronda(jugadas: &Vec<Jugada>) -> bool {
         }
     }
 
-    return false;
+    false
 
 }
 

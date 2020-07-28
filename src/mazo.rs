@@ -33,26 +33,26 @@ impl Carta {
             Palo::Treboles => card.push_str("Treboles") 
         };
 
-        return card
+        card
 
     }
 
     pub fn valor_carta(&self) -> u8 {
         match self.numero {
-            Numero::As =>  return 100,
-            Numero::Dos =>  return 2,
-            Numero::Tres => return 3,
-            Numero::Cuatro => return 4, 
-            Numero::Cinco => return 5,
-            Numero::Seis => return 6,
-            Numero::Siete => return 7,
-            Numero::Ocho => return 8,
-            Numero::Nueve => return 9,
-            Numero::Diez => return 10,
-            Numero::J => return 11,
-            Numero::Q => return 12,
-            Numero::K => return 13
-        };
+            Numero::As => 100,
+            Numero::Dos =>  2,
+            Numero::Tres => 3,
+            Numero::Cuatro => 4, 
+            Numero::Cinco => 5,
+            Numero::Seis => 6,
+            Numero::Siete => 7,
+            Numero::Ocho => 8,
+            Numero::Nueve => 9,
+            Numero::Diez => 10,
+            Numero::J => 11,
+            Numero::Q => 12,
+            Numero::K => 13
+        }
     }
 
 }

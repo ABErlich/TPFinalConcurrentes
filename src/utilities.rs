@@ -24,7 +24,7 @@ pub fn parse_parameters(params : Vec<String>) -> Configuration {
     }
 
     Configuration {
-        player_count: player_count
+        player_count
     }
 }
 
